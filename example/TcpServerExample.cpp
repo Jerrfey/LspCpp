@@ -16,10 +16,13 @@
 #include "LibLsp/JsonRpc/TcpServer.h"
 #include "LibLsp/lsp/textDocument/document_symbol.h"
 #include "LibLsp/lsp/workspace/execute_command.h"
+#include "LibLsp/lsp/workspace/getclasses.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
+#include <chrono>
+
 using namespace boost::asio::ip;
 using namespace std;
 class DummyLog :public lsp::Log
@@ -44,7 +47,7 @@ public:
 	};
 };
 
-std::string _address = "127.0.0.1";
+std::string _address = "172.16.3.62"; //127.0.0.1
 std::string _port = "9333";
 
 class Server
@@ -76,15 +79,25 @@ public:
 				rsp.result.first= std::vector<lsLocation>();
 				return rsp;
 			});
-		
+		server.remote_end_point_.registerRequestHandler([&](const WorkspaceGetClasses::request& req)
+			{
+				//WorkspaceGetClasses::request req2 = req;
+				//std::cout << req2.ToJson() << std::endl;
+				WorkspaceGetClasses::response rsp;
+				auto pre_nodes = req.params.pre_nodes;
+				pre_nodes.push_back("Examples");
+				rsp.result = pre_nodes;
+				return rsp;
+			});
 		server.remote_end_point_.registerNotifyHandler([=](Notify_Exit::notify& notify)
 			{
 				std::cout << notify.ToJson() << std::endl;
+				exit(0);
 			});
 		std::thread([&]()
 			{
 				server.run();
-			}).detach();
+			}).join();
 	}
 	~Server()
 	{
@@ -135,12 +148,19 @@ public:
 	RemoteEndPoint remote_end_point_;
 };
 
-int main() 
+std::vector<std::string> GetClasses(const std::vector<std::string>& pre_nodes)
 {
+	auto new_nodes = pre_nodes;
+	new_nodes.push_back("Examples");
+	return new_nodes;
+}
 
-	Server server;
+int main(int argc, char* argv[])
+{
+#ifdef AS_SERVER
+    Server server;
+#else
 	Client client;
-
 	{
 		td_initialize::request req;
 		auto rsp = client.remote_end_point_.waitResponse(req);
@@ -173,8 +193,31 @@ int main()
 			std::cout << rsp.response.ToJson() << std::endl;
 		}
 	}
+	{
+		WorkspaceGetClasses::request req;
+		req.params.pre_nodes = {"Modelica", "Blocks"};
+		auto start = std::chrono::steady_clock::now();
+		for (int i = 0; i < 1000; ++i)
+		{
+            auto rsp = client.remote_end_point_.waitResponse(req);
+		}
+		auto end = std::chrono::steady_clock::now();
+		std::chrono::duration<double> elapsed = end - start;
+		std::cout << "RPC Total Time:" << (double)elapsed.count() << "s" << endl;
+
+		std::vector<std::string> pre_nodes = { "Modelica", "Blocks" };
+		start = std::chrono::steady_clock::now();
+        for (int i = 0; i < 1000; ++i)
+        {
+			auto rsp = GetClasses(pre_nodes);
+        }
+		end = std::chrono::steady_clock::now();
+        elapsed = end - start;
+        std::cout << "Local Call Total Time:" << (double)elapsed.count() << "s" << endl;
+	}
 	Notify_Exit::notify notify;
 	client.remote_end_point_.sendNotification(notify);
+#endif // AS_SERVER
 	return 0;
 }
 #endif

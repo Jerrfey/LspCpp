@@ -543,6 +543,9 @@
     <ClInclude Include="LibLsp\lsp\extention\sonarlint\protocol.h">
       <Filter>lsp\extention\sonarlint</Filter>
     </ClInclude>
+    <ClInclude Include="LibLsp\lsp\workspace\getclasses.h">
+      <Filter>lsp\workspace</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="JsonRpc">

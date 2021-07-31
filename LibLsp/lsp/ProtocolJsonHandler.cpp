@@ -68,6 +68,7 @@
 #include "textDocument/didRenameFiles.h"
 #include "textDocument/semanticHighlighting.h"
 #include "workspace/configuration.h"
+#include "workspace/getclasses.h"
 
 
 void AddStadardResponseJsonRpcMethod(MessageJsonHandler& handler)
@@ -492,6 +493,10 @@ void AddJavaExtentionResponseJsonRpcMethod(MessageJsonHandler& handler)
 	handler.method2request[WorkspaceConfiguration::request::kMethodInfo] = [](Reader& visitor)
 	{
 		return WorkspaceConfiguration::request::ReflectReader(visitor);
+	};
+	handler.method2request[WorkspaceGetClasses::request::kMethodInfo] = [](Reader& visitor)
+	{
+		return WorkspaceGetClasses::request::ReflectReader(visitor);
 	};
 	handler.method2request[WorkspaceFolders::request::kMethodInfo] = [](Reader& visitor)
 	{
